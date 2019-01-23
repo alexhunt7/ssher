@@ -1,9 +1,8 @@
-package main
+package ssher
 
 import (
 	"os"
 	osuser "os/user"
-	"fmt"
 	"github.com/kevinburke/ssh_config"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
@@ -35,7 +34,7 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 //	return nil
 //}
 
-func main() {
+func Dial(alias string) (*ssh.Client, error) {
 	var err error
 	/* TODO
 	   // Rand
@@ -43,8 +42,6 @@ func main() {
 	   // ClientVersion
 	*/
 
-	//alias := "102.30.1.3"
-	alias := "localhost"
 	macs :=              strings.Split(ssh_config.Get(alias, "MACs"), ",")
 	keyExchanges :=      strings.Split(ssh_config.Get(alias, "KexAlgorithms"), ",")
 	ciphers :=           strings.Split(ssh_config.Get(alias, "Ciphers"), ",")
@@ -70,7 +67,6 @@ func main() {
 		}
 		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
 	}
-	fmt.Println(userKnownHostsFiles)
 	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
 	if err != nil {
 		panic(err)
@@ -111,17 +107,6 @@ func main() {
 		timeout = time.Duration(timeoutInt) * time.Second
 	}
 
-	fmt.Println(hostname)
-	fmt.Println(port)
-	fmt.Println(user)
-	fmt.Println(identityFile)
-	fmt.Println(auth)
-	fmt.Println(macs)
-	fmt.Println(keyExchanges)
-	fmt.Println(ciphers)
-	fmt.Println(hostKeyAlgorithms)
-	fmt.Println(timeout)
-
 	clientConfig := &ssh.ClientConfig{
 		Config: *config,
 		User:              user,
@@ -131,39 +116,5 @@ func main() {
 		Timeout: timeout,
 	}
 
-	conn, err := ssh.Dial("tcp", hostname + ":" + port, clientConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	session, err := conn.NewSession()
-	if err != nil {
-		panic(err)
-	}
-	defer session.Close()
-
-	_, err = session.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-
-	//name := fmt.Sprintf("%s/backup_folder_%v.tar.gz", path, time.Now().Unix())
-	//file, err := os.OpenFile(name, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	//if err != nil {
-	//    return err
-	//}
-	//defer file.Close()
-	//
-	//if err := session.Start(cmd); err != nil {
-	//    return err
-	//}
-	//
-	//n, err := io.Copy(file, r)
-	//if err != nil {
-	//    return err
-	//}
-	//
-	//if err := session.Wait(); err != nil {
-	//    return err
-	//}
+	return ssh.Dial("tcp", hostname + ":" + port, clientConfig)
 }
