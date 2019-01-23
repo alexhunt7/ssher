@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"io/ioutil"
-	"path/filepath"
+	//"path/filepath"
 	"strings"
 	"strconv"
 	"time"
@@ -36,6 +36,7 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 //}
 
 func main() {
+	var err error
 	/* TODO
 	   // Rand
 	   // BannerCallback
@@ -54,7 +55,23 @@ func main() {
 		Ciphers:           ciphers,
 	}
 
-	hostKeyCallback, err := knownhosts.New(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
+	var userKnownHostsFiles []string
+	for _, f := range strings.Split(ssh_config.Get(alias, "UserKnownHostsFile"), " ") {
+		expandedF, err := homedir.Expand(f)
+		if err != nil {
+			panic(err)
+		}
+		_, err = os.Stat(expandedF)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			panic(err)
+		}
+		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
+	}
+	fmt.Println(userKnownHostsFiles)
+	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
 	if err != nil {
 		panic(err)
 	}
