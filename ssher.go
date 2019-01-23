@@ -2,30 +2,18 @@ package main
 
 import (
 	"os"
+	osuser "os/user"
+	"fmt"
 	"github.com/kevinburke/ssh_config"
+	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
+	"strconv"
+	"time"
 )
-
-//func GetConfigs(alias string) []Wrapper {
-//	configs := []ssh_config.Config{}
-//
-//	f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "config"))
-//	cfg, _ := ssh_config.Decode(f)
-//	for _, host := range cfg.Hosts {
-//		if host.Matches(alias) {
-//			configs = append(configs,
-//				ssh_config.Config{
-//					Hosts: []*ssh_config.Host{host},
-//				},
-//			)
-//		}
-//	}
-//
-//	return configs
-//}
 
 func PublicKeyFile(file string) ssh.AuthMethod {
 	buffer, err := ioutil.ReadFile(file)
@@ -47,62 +35,86 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 //	return nil
 //}
 
-//func GetIdentities(files []string) []ssh.AuthMethod {
-//	keys := []ssh.AuthMethod
-//	for _, f := range files {
-//		keys = append(keys, PublicKeyFile(f))
-//	}
-//	return keys
-//}
-//
-//func GetAll(configs []ssh_config.Config, param string) []string {
-//	values := []string
-//	for _, c := range configs {
-//		values = append(values, c.Get(param))
-//	}
-//	return values
-//}
-
 func main() {
-	/*
-	   // config
+	/* TODO
 	   // Rand
-	   // RekeyThreshold
-	   HostKeyCallback
 	   // BannerCallback
 	   // ClientVersion
-	   HostKeyAlgorithms
-	   //Timeout: configs[0].Get("Timeout"),
 	*/
 
+	//alias := "102.30.1.3"
 	alias := "localhost"
-	//configs := GetConfigs(alias)
-	//clientConfig := &ssh.ClientConfig{
-	//	User: configs[0].Get("User"),
-	//	Auth: GetIdentities(GetAll(configs, "IdentityFile")),
-	//	MACs: GetAll(configs, "MACs"),
-	//	KeyExchanges: GetAll(configs, "KeyExchanges"),
-	//	HostKeyAlgorithms: GetAll(configs, "HostKeyAlgorithms"),
-	//	Ciphers: GetAll(configs, "Ciphers"),
-	//}
-	//config := &ssh.Config{
-	//	MACs:              ssh_config.Get(alias, "MACs"),
-	//	KeyExchanges:      ssh_config.Get(alias, "KeyExchanges"),
-	//	Ciphers:           ssh_config.Get(alias, "Ciphers"),
-	//}
+	macs :=              strings.Split(ssh_config.Get(alias, "MACs"), ",")
+	keyExchanges :=      strings.Split(ssh_config.Get(alias, "KexAlgorithms"), ",")
+	ciphers :=           strings.Split(ssh_config.Get(alias, "Ciphers"), ",")
+
+	config := &ssh.Config{
+		MACs:              macs,
+		KeyExchanges:      keyExchanges,
+		Ciphers:           ciphers,
+	}
+
 	hostKeyCallback, err := knownhosts.New(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
 	if err != nil {
 		panic(err)
 	}
-	clientConfig := &ssh.ClientConfig{
-		//Config: config,
-		User:              ssh_config.Get(alias, "User"),
-		Auth:              []ssh.AuthMethod{PublicKeyFile(ssh_config.Get(alias, "IdentityFile")),},
-		HostKeyCallback: hostKeyCallback,
-		//HostKeyAlgorithms: ssh_config.Get(alias, "HostKeyAlgorithms"),
+
+	hostname := ssh_config.Get(alias, "Hostname")
+	if hostname == "" {
+		hostname = alias
 	}
 
-	conn, err := ssh.Dial("tcp", ssh_config.Get(alias, "Hostname")+":"+ssh_config.Get(alias, "Port"), clientConfig)
+	port := ssh_config.Get(alias, "Port")
+
+	user := ssh_config.Get(alias, "User")
+	if user == "" {
+		currentUser, err := osuser.Current()
+		if err != nil {
+			panic(err)
+		}
+		user = currentUser.Username
+	}
+
+	identityFile, err := homedir.Expand(ssh_config.Get(alias, "IdentityFile"))
+	if err != nil {
+		panic(err)
+	}
+
+	auth := []ssh.AuthMethod{PublicKeyFile(identityFile),}
+	hostKeyAlgorithms := strings.Split(ssh_config.Get(alias, "HostKeyAlgorithms"), ",")
+	timeoutString := ssh_config.Get(alias, "ConnectTimeout")
+	var timeout time.Duration
+	if timeoutString == "" {
+		timeout = 0
+	} else {
+		timeoutInt, err := strconv.ParseInt(timeoutString, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		timeout = time.Duration(timeoutInt) * time.Second
+	}
+
+	fmt.Println(hostname)
+	fmt.Println(port)
+	fmt.Println(user)
+	fmt.Println(identityFile)
+	fmt.Println(auth)
+	fmt.Println(macs)
+	fmt.Println(keyExchanges)
+	fmt.Println(ciphers)
+	fmt.Println(hostKeyAlgorithms)
+	fmt.Println(timeout)
+
+	clientConfig := &ssh.ClientConfig{
+		Config: *config,
+		User:              user,
+		Auth:              auth,
+		HostKeyCallback: hostKeyCallback,
+		HostKeyAlgorithms: hostKeyAlgorithms,
+		Timeout: timeout,
+	}
+
+	conn, err := ssh.Dial("tcp", hostname + ":" + port, clientConfig)
 	if err != nil {
 		panic(err)
 	}
