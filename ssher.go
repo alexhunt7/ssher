@@ -5,10 +5,10 @@ import (
 	osuser "os/user"
 	"github.com/kevinburke/ssh_config"
 	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"io/ioutil"
-	//"path/filepath"
 	"strings"
 	"strconv"
 	"time"
@@ -56,20 +56,20 @@ func Dial(alias string) (*ssh.Client, error) {
 	for _, f := range strings.Split(ssh_config.Get(alias, "UserKnownHostsFile"), " ") {
 		expandedF, err := homedir.Expand(f)
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "failed to expand home directory for UserKnownHostsfile")
 		}
 		_, err = os.Stat(expandedF)
 		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "failed to stat UserKnownHostsFile")
 		}
 		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
 	}
 	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to create host key callback")
 	}
 
 	hostname := ssh_config.Get(alias, "Hostname")
@@ -83,14 +83,14 @@ func Dial(alias string) (*ssh.Client, error) {
 	if user == "" {
 		currentUser, err := osuser.Current()
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "failed to detect current user")
 		}
 		user = currentUser.Username
 	}
 
 	identityFile, err := homedir.Expand(ssh_config.Get(alias, "IdentityFile"))
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to expand home directory for IdentityFile")
 	}
 
 	auth := []ssh.AuthMethod{PublicKeyFile(identityFile),}
@@ -102,7 +102,7 @@ func Dial(alias string) (*ssh.Client, error) {
 	} else {
 		timeoutInt, err := strconv.ParseInt(timeoutString, 10, 64)
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "failed to convert ConnectTimeout to int64")
 		}
 		timeout = time.Duration(timeoutInt) * time.Second
 	}
