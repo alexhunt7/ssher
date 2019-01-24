@@ -34,8 +34,9 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 //	return nil
 //}
 
-func Dial(alias string) (*ssh.Client, error) {
+func ClientConfig(alias string) (*ssh.ClientConfig, string, error) {
 	var err error
+	var connectHost string
 	/* TODO
 	   // Rand
 	   // BannerCallback
@@ -56,20 +57,20 @@ func Dial(alias string) (*ssh.Client, error) {
 	for _, f := range strings.Split(ssh_config.Get(alias, "UserKnownHostsFile"), " ") {
 		expandedF, err := homedir.Expand(f)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to expand home directory for UserKnownHostsfile")
+			return nil, connectHost, errors.Wrap(err, "failed to expand home directory for UserKnownHostsfile")
 		}
 		_, err = os.Stat(expandedF)
 		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to stat UserKnownHostsFile")
+			return nil, connectHost, errors.Wrap(err, "failed to stat UserKnownHostsFile")
 		}
 		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
 	}
 	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create host key callback")
+		return nil, connectHost, errors.Wrap(err, "failed to create host key callback")
 	}
 
 	hostname := ssh_config.Get(alias, "Hostname")
@@ -83,14 +84,14 @@ func Dial(alias string) (*ssh.Client, error) {
 	if user == "" {
 		currentUser, err := osuser.Current()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to detect current user")
+			return nil, connectHost, errors.Wrap(err, "failed to detect current user")
 		}
 		user = currentUser.Username
 	}
 
 	identityFile, err := homedir.Expand(ssh_config.Get(alias, "IdentityFile"))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to expand home directory for IdentityFile")
+		return nil, connectHost, errors.Wrap(err, "failed to expand home directory for IdentityFile")
 	}
 
 	auth := []ssh.AuthMethod{PublicKeyFile(identityFile),}
@@ -102,19 +103,18 @@ func Dial(alias string) (*ssh.Client, error) {
 	} else {
 		timeoutInt, err := strconv.ParseInt(timeoutString, 10, 64)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert ConnectTimeout to int64")
+			return nil, connectHost, errors.Wrap(err, "failed to convert ConnectTimeout to int64")
 		}
 		timeout = time.Duration(timeoutInt) * time.Second
 	}
 
-	clientConfig := &ssh.ClientConfig{
+	connectHost = hostname + ":" + port
+	return &ssh.ClientConfig{
 		Config: *config,
 		User:              user,
 		Auth:              auth,
 		HostKeyCallback: hostKeyCallback,
 		HostKeyAlgorithms: hostKeyAlgorithms,
 		Timeout: timeout,
-	}
-
-	return ssh.Dial("tcp", hostname + ":" + port, clientConfig)
+	}, connectHost, nil
 }
