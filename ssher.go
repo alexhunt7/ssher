@@ -7,8 +7,10 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"io/ioutil"
+	"net"
 	"strings"
 	"strconv"
 	"time"
@@ -27,12 +29,12 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 	return ssh.PublicKeys(key)
 }
 
-//func SSHAgent() ssh.AuthMethod {
-//	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-//		return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
-//	}
-//	return nil
-//}
+func SSHAgent() ssh.AuthMethod {
+	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
+		return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
+	}
+	return nil
+}
 
 func ClientConfig(alias string) (*ssh.ClientConfig, string, error) {
 	var err error
@@ -94,7 +96,16 @@ func ClientConfig(alias string) (*ssh.ClientConfig, string, error) {
 		return nil, connectHost, errors.Wrap(err, "failed to expand home directory for IdentityFile")
 	}
 
-	auth := []ssh.AuthMethod{PublicKeyFile(identityFile),}
+	auth := []ssh.AuthMethod{}
+	sshAgent := SSHAgent()
+	if sshAgent != nil {
+		auth = append(auth, sshAgent)
+	}
+	pubkey := PublicKeyFile(identityFile)
+	if pubkey != nil {
+		auth = append(auth, pubkey)
+	}
+
 	hostKeyAlgorithms := strings.Split(ssh_config.Get(alias, "HostKeyAlgorithms"), ",")
 	timeoutString := ssh_config.Get(alias, "ConnectTimeout")
 	var timeout time.Duration
