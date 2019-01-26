@@ -1,6 +1,6 @@
-.PHONY: clean fmt test
+.PHONY: clean fmt lint vet ineffassign misspell cyclo test
 
-all: clean fmt test
+all: clean fmt lint vet ineffassign misspell cyclo test
 
 clean:
 	rm -f coverage.out
@@ -8,6 +8,21 @@ clean:
 fmt:
 	go fmt .
 
-test: fmt
+lint:
+	golint .
+
+vet:
+	go vet .
+
+ineffassign:
+	ineffassign .
+
+misspell:
+	misspell .
+
+cyclo:
+	gocyclo .
+
+test: clean fmt
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
