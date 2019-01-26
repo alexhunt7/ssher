@@ -8,19 +8,19 @@ clean:
 fmt:
 	@go fmt .
 
-lint:
+lint: fmt
 	@golint .
 
-vet:
+vet: fmt
 	@go vet .
 
-ineffassign:
+ineffassign: fmt
 	@ineffassign .
 
-misspell:
+misspell: fmt
 	@misspell .
 
-cyclo:
+cyclo: fmt
 	@gocyclo .
 
 test: clean fmt
