@@ -105,6 +105,29 @@ func decodeSSHConfig(configFile string) (sshConfig, error) {
 	return userConfig, err
 }
 
+func getHostKeyCallback(userKnownHostsFilesPaths []string) (ssh.HostKeyCallback, error) {
+	var userKnownHostsFiles []string
+	for _, f := range userKnownHostsFilesPaths {
+		expandedF, err := homedir.Expand(f)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to expand home directory for UserKnownHostsfile")
+		}
+		_, err = os.Stat(expandedF)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to stat UserKnownHostsFile")
+		}
+		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
+	}
+	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to call knownhosts.New")
+	}
+	return hostKeyCallback, nil
+}
+
 // ClientConfig takes in an ssh config file host alias and a path to an ssh config file,
 // and returns an ssh.ClientConfig and a connection string (for dialing).
 // If passed an empty string for the configFile, it will use the default config file paths:
@@ -134,22 +157,7 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 		Ciphers:      ciphers,
 	}
 
-	var userKnownHostsFiles []string
-	for _, f := range strings.Split(userConfig.Get(alias, "UserKnownHostsFile"), " ") {
-		expandedF, err := homedir.Expand(f)
-		if err != nil {
-			return nil, connectHost, errors.Wrap(err, "failed to expand home directory for UserKnownHostsfile")
-		}
-		_, err = os.Stat(expandedF)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			return nil, connectHost, errors.Wrap(err, "failed to stat UserKnownHostsFile")
-		}
-		userKnownHostsFiles = append(userKnownHostsFiles, expandedF)
-	}
-	hostKeyCallback, err := knownhosts.New(userKnownHostsFiles...)
+	hostKeyCallback, err := getHostKeyCallback(strings.Split(userConfig.Get(alias, "UserKnownHostsFile"), " "))
 	if err != nil {
 		return nil, connectHost, errors.Wrap(err, "failed to create host key callback")
 	}
