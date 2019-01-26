@@ -2,12 +2,9 @@
 [![GoDoc](https://godoc.org/github.com/alexhunt7/ssher?status.svg)](https://godoc.org/github.com/alexhunt7/ssher)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alexhunt7/ssher)](https://goreportcard.com/report/github.com/alexhunt7/ssher)
 
-Easily create ssh connections in golang using values from your ssh config file.
+Easily create golang.org/x/crypto/ssh connections in golang, using values from your ssh config file.
 
 Most people will already have configured their ssh connections once for openssh, so why do it again manually?
-
-I searched all over, but couldn't find any implementations that fully configured an ssh.Config object,
-and none that got their values from the ssh config file.
 
 This package is essentially a wrapper around https://github.com/kevinburke/ssh_config,
 which attempts to automatically load all required values from your ~/.ssh/config.

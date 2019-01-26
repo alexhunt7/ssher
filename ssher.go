@@ -1,5 +1,5 @@
 /*
-Package ssher allows you to easily create ssh connections in golang, using values from your ssh config file.
+Package ssher allows you to easily create golang.org/x/crypto/ssh connections in golang, using values from your ssh config file
 
 Most people will already have configured their ssh connections once for openssh, so why do it again manually?
 
@@ -8,20 +8,23 @@ which attempts to automatically load all required values from your ~/.ssh/config
 
 
 Currently supported options:
-* Ciphers
-* ConnectTimeout
-* HostKeyAlgorithms
-* Hostname
-* IdentityFile
-* KexAlgorithms
-* MACs
-* Port
-* User
-* UserKnownHostsFile
+
+	* Ciphers
+	* ConnectTimeout
+	* HostKeyAlgorithms
+	* Hostname
+	* IdentityFile
+	* KexAlgorithms
+	* MACs
+	* Port
+	* User
+	* UserKnownHostsFile
 
 
-Currently, only public key auth is attempted and only the agent and one IdentityFile will be used.
+Currently, only public key auth is attempted, and only the agent and one IdentityFile will be used.
+
 Host key checking is enforced.
+
 Any limitations that apply to https://github.com/kevinburke/ssh_config also apply here (currently no support for +value syntax).
 */
 package ssher
