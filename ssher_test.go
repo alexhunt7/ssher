@@ -1,7 +1,6 @@
 package ssher
 
 import (
-	"fmt"
 	"golang.org/x/crypto/ssh"
 	"testing"
 	"time"
@@ -10,22 +9,22 @@ import (
 func ExampleClientConfig_defaults() {
 	sshConfig, hostPort, err := ClientConfig("myhost.mydomain.com", "")
 	if err != nil {
-		fmt.Println("Handle error here...")
+		// Handle error here...
 	}
 	_, err = ssh.Dial("tcp", hostPort, sshConfig)
 	if err != nil {
-		fmt.Println("Handle error here...")
+		// Handle error here...
 	}
 }
 
 func ExampleClientConfig_custom() {
 	sshConfig, hostPort, err := ClientConfig("myhost.mydomain.com", "~/somedir/my_ssh_config")
 	if err != nil {
-		fmt.Println("Handle error here...")
+		// Handle error here...
 	}
 	_, err = ssh.Dial("tcp", hostPort, sshConfig)
 	if err != nil {
-		fmt.Println("Handle error here...")
+		// Handle error here...
 	}
 }
 
