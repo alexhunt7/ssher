@@ -1,10 +1,11 @@
 /*
-Package ssher allows you to easily create golang.org/x/crypto/ssh connections in golang, using values from your ssh config file
-
-Most people will already have configured their ssh connections once for openssh, so why do it again manually?
+Package ssher allows you to easily create ssh connections in golang.
 
 This package is essentially a wrapper around https://github.com/kevinburke/ssh_config,
-which attempts to automatically load all required values from your ~/.ssh/config.
+which attempts to automatically load all values required to create a
+https://golang.org/x/crypto/ssh ClientConfig from your ~/.ssh/config.
+
+Most people will already have configured their ssh connections once for openssh, so why do it again manually?
 
 
 Currently supported options:
