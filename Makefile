@@ -1,9 +1,13 @@
-.PHONY: clean test bench
+.PHONY: clean fmt test
 
-all: clean test
+all: clean fmt test
 
 clean:
 	rm -f coverage.out
-test:
+
+fmt:
+	go fmt .
+
+test: fmt
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
