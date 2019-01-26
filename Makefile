@@ -3,25 +3,25 @@
 all: clean fmt lint vet ineffassign misspell cyclo test
 
 clean:
-	rm -f coverage.out
+	@rm -f coverage.out
 
 fmt:
-	go fmt .
+	@go fmt .
 
 lint:
-	golint .
+	@golint .
 
 vet:
-	go vet .
+	@go vet .
 
 ineffassign:
-	ineffassign .
+	@ineffassign .
 
 misspell:
-	misspell .
+	@misspell .
 
 cyclo:
-	gocyclo .
+	@gocyclo .
 
 test: clean fmt
 	go test ./... -coverprofile=coverage.out
