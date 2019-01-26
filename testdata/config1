@@ -1,0 +1,17 @@
+Host localhost 127.*
+    Hostname 127.0.0.1
+    User testuser
+    IdentityFile ~/.ssh/id_rsa
+    Port 22
+
+Host ConnectTimeout
+    ConnectTimeout 1
+
+Host Connect*
+    Port 1234
+
+Host FailedTimeout
+    ConnectTimeout FailedTimeout
+
+Host *
+    User testuser2
