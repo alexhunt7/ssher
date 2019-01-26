@@ -26,8 +26,8 @@ cyclo: fmt
 	@gocyclo .
 
 docs: clean fmt
-	bash -c 'godoc -http=:6060 & sleep 1 && wget -e robots=off -r -np -N -E -p -k http://localhost:6060/pkg/github.com/alexhunt7/ssher/; mv "localhost:6060" docs; kill $(PERCENT)1'
-	firefox docs/pkg/github.com/alexhunt7/ssher/index.html
+	@bash -c 'godoc -http=:6060 &>/dev/null & sleep 1 && wget --quiet -e robots=off -r -np -N -E -p -k http://localhost:6060/pkg/github.com/alexhunt7/ssher/; mv "localhost:6060" docs; kill $(PERCENT)1'
+	@firefox docs/pkg/github.com/alexhunt7/ssher/index.html
 
 test: clean fmt
 	go test ./... -coverprofile=coverage.out
