@@ -46,8 +46,8 @@ import (
 	"time"
 )
 
-// PublicKeyFile takes a path to an IdentityFile, reads it, and parses it into an ssh.AuthMethod.
-func PublicKeyFile(file string) ssh.AuthMethod {
+// publicKeyFile takes a path to an IdentityFile, reads it, and parses it into an ssh.AuthMethod.
+func publicKeyFile(file string) ssh.Signer {
 	buffer, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil
@@ -57,7 +57,7 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 	if err != nil {
 		return nil
 	}
-	return ssh.PublicKeys(key)
+	return key
 }
 
 type sshConfig interface {
@@ -76,11 +76,15 @@ func (cw *configWrapper) Get(alias, key string) string {
 	return val
 }
 
-// SSHAgent connects to the ssh agent defined by the SSH_AUTH_SOCK environment variable,
-// and returns an ssh.PublicKeysCallback ssh.AuthMethod if successful.
-func SSHAgent() ssh.AuthMethod {
+// sshAgentSigners connects to the ssh agent defined by the SSH_AUTH_SOCK environment variable,
+// and returns a []ssh.Signer if successful.
+func sshAgentSigners() []ssh.Signer {
 	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-		return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
+		signers, err := agent.NewClient(sshAgent).Signers()
+		if err != nil {
+			return nil
+		}
+		return signers
 	}
 	return nil
 }
@@ -185,20 +189,17 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 		user = currentUser.Username
 	}
 
-	auth := []ssh.AuthMethod{}
-	sshAgent := SSHAgent()
-	if sshAgent != nil {
-		auth = append(auth, sshAgent)
-	}
+	signers := sshAgentSigners()
 
 	identityFile, err := homedir.Expand(userConfig.Get(alias, "IdentityFile"))
 	if err != nil {
 		return nil, connectHost, errors.Wrap(err, "failed to expand home directory for IdentityFile")
 	}
-	pubkey := PublicKeyFile(identityFile)
+	pubkey := publicKeyFile(identityFile)
 	if pubkey != nil {
-		auth = append(auth, pubkey)
+		signers = append(signers, pubkey)
 	}
+	auth := ssh.PublicKeys(signers...)
 
 	hostKeyAlgorithms := strings.Split(userConfig.Get(alias, "HostKeyAlgorithms"), ",")
 	timeoutString := userConfig.Get(alias, "ConnectTimeout")
@@ -217,7 +218,7 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 	return &ssh.ClientConfig{
 		Config:            *config,
 		User:              user,
-		Auth:              auth,
+		Auth:              []ssh.AuthMethod{auth},
 		HostKeyCallback:   hostKeyCallback,
 		HostKeyAlgorithms: hostKeyAlgorithms,
 		Timeout:           timeout,
