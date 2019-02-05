@@ -1,0 +1,6 @@
+Host docker
+User testuser
+    Hostname 127.0.0.1
+    Port 32080
+    UserKnownHostsFile /home/alex/go/src/github.com/alexhunt7/ssher/testdata/docker_known_hosts
+    IdentityFile /home/alex/go/src/github.com/alexhunt7/ssher/testdata/ssh_host_rsa_key
