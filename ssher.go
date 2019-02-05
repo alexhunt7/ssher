@@ -155,30 +155,38 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 	   // ClientVersion
 	*/
 
-	macs := strings.Split(userConfig.Get(alias, "MACs"), ",")
-	keyExchanges := strings.Split(userConfig.Get(alias, "KexAlgorithms"), ",")
-	ciphers := strings.Split(userConfig.Get(alias, "Ciphers"), ",")
-
-	config := &ssh.Config{
-		MACs:         macs,
-		KeyExchanges: keyExchanges,
-		Ciphers:      ciphers,
+	config := &ssh.Config{}
+	macs := userConfig.Get(alias, "MACs")
+	if macs != "" {
+		config.MACs = strings.Split(macs, ",")
+	}
+	kexs := userConfig.Get(alias, "KexAlgorithms")
+	if kexs != "" {
+		config.KeyExchanges = strings.Split(kexs, ",")
+	}
+	ciphers := userConfig.Get(alias, "Ciphers")
+	if ciphers != "" {
+		config.Ciphers = strings.Split(ciphers, ",")
 	}
 
-	hostKeyCallback, err := getHostKeyCallback(strings.Split(userConfig.Get(alias, "UserKnownHostsFile"), " "))
+	clientConfig := &ssh.ClientConfig{
+		Config: *config,
+	}
+
+	// TODO handle known_hosts2
+	// TODO default empty?
+	userKnownHostsFile := userConfig.Get(alias, "UserKnownHostsFile")
+	if userKnownHostsFile == "" {
+		userKnownHostsFile, err = homedir.Expand("~/.ssh/known_hosts")
+		if err != nil {
+			return nil, connectHost, errors.Wrap(err, "failed to expand ~/.ssh/known_hosts")
+		}
+	}
+	hostKeyCallback, err := getHostKeyCallback(strings.Split(userKnownHostsFile, " "))
 	if err != nil {
 		return nil, connectHost, errors.Wrap(err, "failed to create host key callback")
 	}
-
-	hostname := userConfig.Get(alias, "Hostname")
-	if hostname == "" {
-		hostname = alias
-	}
-
-	port := userConfig.Get(alias, "Port")
-	if port == "" {
-		port = "22"
-	}
+	clientConfig.HostKeyCallback = hostKeyCallback
 
 	user := userConfig.Get(alias, "User")
 	if user == "" {
@@ -188,9 +196,9 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 		}
 		user = currentUser.Username
 	}
+	clientConfig.User = user
 
 	signers := sshAgentSigners()
-
 	identityFile, err := homedir.Expand(userConfig.Get(alias, "IdentityFile"))
 	if err != nil {
 		return nil, connectHost, errors.Wrap(err, "failed to expand home directory for IdentityFile")
@@ -199,28 +207,31 @@ func ClientConfig(alias string, configFile string) (*ssh.ClientConfig, string, e
 	if pubkey != nil {
 		signers = append(signers, pubkey)
 	}
-	auth := ssh.PublicKeys(signers...)
+	clientConfig.Auth = []ssh.AuthMethod{ssh.PublicKeys(signers...)}
 
-	hostKeyAlgorithms := strings.Split(userConfig.Get(alias, "HostKeyAlgorithms"), ",")
+	hostKeyAlgorithms := userConfig.Get(alias, "HostKeyAlgorithms")
+	if hostKeyAlgorithms != "" {
+		clientConfig.HostKeyAlgorithms = strings.Split(hostKeyAlgorithms, ",")
+	}
+
 	timeoutString := userConfig.Get(alias, "ConnectTimeout")
-	var timeout time.Duration
-	if timeoutString == "" {
-		timeout = 0
-	} else {
+	if timeoutString != "" {
 		timeoutInt, err := strconv.ParseInt(timeoutString, 10, 64)
 		if err != nil {
 			return nil, connectHost, errors.Wrap(err, "failed to convert ConnectTimeout to int64")
 		}
-		timeout = time.Duration(timeoutInt) * time.Second
+		clientConfig.Timeout = time.Duration(timeoutInt) * time.Second
 	}
 
+	hostname := userConfig.Get(alias, "Hostname")
+	if hostname == "" {
+		hostname = alias
+	}
+	port := userConfig.Get(alias, "Port")
+	if port == "" {
+		port = "22"
+	}
 	connectHost = hostname + ":" + port
-	return &ssh.ClientConfig{
-		Config:            *config,
-		User:              user,
-		Auth:              []ssh.AuthMethod{auth},
-		HostKeyCallback:   hostKeyCallback,
-		HostKeyAlgorithms: hostKeyAlgorithms,
-		Timeout:           timeout,
-	}, connectHost, nil
+
+	return clientConfig, connectHost, nil
 }
