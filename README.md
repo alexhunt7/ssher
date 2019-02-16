@@ -26,3 +26,5 @@ Currently supported options:
 Currently, only public key auth is attempted and only one IdentityFile will be used.
 Host key checking is enforced.
 Any limitations that apply to https://github.com/kevinburke/ssh_config also apply here (currently no support for +value syntax).
+
+This module is not ready for production use.
