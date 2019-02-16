@@ -94,22 +94,26 @@ func decodeSSHConfig(configFile string) (sshConfig, error) {
 	var err error
 
 	if configFile == "" {
-		// Use the default ~/.ssh/config and /etc/ssh/ssh_config
-		userConfig = ssh_config.DefaultUserSettings
-	} else {
-		fd, err := os.Open(configFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to open ssh config file")
-		}
-		defer fd.Close()
-
-		decodedConfig, err := ssh_config.Decode(fd)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode ssh config file")
-		}
-
-		userConfig = &configWrapper{decodedConfig}
+		configFile = "~/.ssh/config"
 	}
+
+	expandedF, err := homedir.Expand(configFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to expand home directory for ssh config file")
+	}
+
+	fd, err := os.Open(expandedF)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open ssh config file")
+	}
+	defer fd.Close()
+
+	decodedConfig, err := ssh_config.Decode(fd)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode ssh config file")
+	}
+
+	userConfig = &configWrapper{decodedConfig}
 	return userConfig, err
 }
 
