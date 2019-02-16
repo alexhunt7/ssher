@@ -114,6 +114,9 @@ func decodeSSHConfig(configFile string) (sshConfig, error) {
 }
 
 func getHostKeyCallback(userKnownHostsFilesPaths []string) (ssh.HostKeyCallback, error) {
+	if len(userKnownHostsFilesPaths) == 0 {
+		userKnownHostsFilesPaths = append(userKnownHostsFilesPaths, "~/.ssh/known_hosts")
+	}
 	var userKnownHostsFiles []string
 	for _, f := range userKnownHostsFilesPaths {
 		expandedF, err := homedir.Expand(f)
