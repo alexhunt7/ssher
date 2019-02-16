@@ -108,7 +108,7 @@ func TestActuallyConnecting(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	known_hosts := testdataDir + "/docker_known_hosts"
+	knownHosts := testdataDir + "/docker_known_hosts"
 	identity := testdataDir + "/ssh_host_rsa_key"
 
 	containerIDBytes, err := exec.Command("docker", "run", "-d", "--rm",
@@ -136,7 +136,7 @@ func TestActuallyConnecting(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	_, err = f.WriteString("Host docker\nUser testuser\n    Hostname 127.0.0.1\n    Port " + port + "\n    UserKnownHostsFile " + known_hosts + "\n    IdentityFile " + identity + "\n")
+	_, err = f.WriteString("Host docker\nUser testuser\n    Hostname 127.0.0.1\n    Port " + port + "\n    UserKnownHostsFile " + knownHosts + "\n    IdentityFile " + identity + "\n")
 	if err != nil {
 		t.Error(err)
 		return
